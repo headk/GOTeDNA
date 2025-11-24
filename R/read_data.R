@@ -16,7 +16,7 @@
 #' @return A tibble with 26 columns:
 #' * `protocol_ID`
 #' * `protocolVersion`
-#' * `materialSampleID`
+#' * `samp_name`
 #' * `eventID`
 #' * `primer`
 #' * `species`
@@ -116,21 +116,21 @@ read_data <- function(
 
   # match event date to samples
   for (j in seq_len(length(samples))) {
-    samples[[j]]$date <- metadata[[j]]$eventDate[match(samples[[j]]$materialSampleID, metadata[[j]]$materialSampleID)]
-  #  samples[[j]]$ecodistrict <- metadata[[j]]$ecodistrict[match(samples[[j]]$materialSampleID, metadata[[j]]$materialSampleID)] %>%
+    samples[[j]]$date <- metadata[[j]]$eventDate[match(samples[[j]]$samp_name, metadata[[j]]$samp_name)]
+  #  samples[[j]]$ecodistrict <- metadata[[j]]$ecodistrict[match(samples[[j]]$samp_name, metadata[[j]]$samp_name)] %>%
    #   stringr::str_remove_all( # clean ecodistrict
   #      pattern = "(-?[:digit:])"
   #    )
 
-    samples[[j]]$protocolVersion <- metadata[[j]]$protocolVersion[match(samples[[j]]$materialSampleID, metadata[[j]]$materialSampleID)]
-    samples[[j]]$decimalLatitude <- metadata[[j]]$decimalLatitude[match(samples[[j]]$materialSampleID, metadata[[j]]$materialSampleID)]
-    samples[[j]]$decimalLongitude <- metadata[[j]]$decimalLongitude[match(samples[[j]]$materialSampleID, metadata[[j]]$materialSampleID)]
-    samples[[j]]$station <- metadata[[j]]$samplingStation[match(samples[[j]]$materialSampleID, metadata[[j]]$materialSampleID)]
+    samples[[j]]$protocolVersion <- metadata[[j]]$protocolVersion[match(samples[[j]]$samp_name, metadata[[j]]$samp_name)]
+    samples[[j]]$decimalLatitude <- metadata[[j]]$decimalLatitude[match(samples[[j]]$samp_name, metadata[[j]]$samp_name)]
+    samples[[j]]$decimalLongitude <- metadata[[j]]$decimalLongitude[match(samples[[j]]$samp_name, metadata[[j]]$samp_name)]
+    samples[[j]]$station <- metadata[[j]]$samplingStation[match(samples[[j]]$samp_name, metadata[[j]]$samp_name)]
     samples[[j]]$year <- lubridate::year(samples[[j]]$date)
     samples[[j]]$month <- lubridate::month(samples[[j]]$date)
-    samples[[j]]$LClabel <- metadata[[j]]$LClabel[match(samples[[j]]$materialSampleID, metadata[[j]]$materialSampleID)]
-    samples[[j]]$ownerContact <- metadata[[j]]$ownerContact[match(samples[[j]]$materialSampleID, metadata[[j]]$materialSampleID)]
-    samples[[j]]$bibliographicCitation <- metadata[[j]]$bibliographicCitation[match(samples[[j]]$materialSampleID, metadata[[j]]$materialSampleID)]}
+    samples[[j]]$LClabel <- metadata[[j]]$LClabel[match(samples[[j]]$samp_name, metadata[[j]]$samp_name)]
+    samples[[j]]$ownerContact <- metadata[[j]]$ownerContact[match(samples[[j]]$samp_name, metadata[[j]]$samp_name)]
+    samples[[j]]$bibliographicCitation <- metadata[[j]]$bibliographicCitation[match(samples[[j]]$samp_name, metadata[[j]]$samp_name)]}
 
   samples <- lapply(samples, function(x) {
     if (choose.method == "qPCR") {
@@ -141,7 +141,7 @@ read_data <- function(
           decimalLatitude = suppressWarnings(as.numeric(decimalLatitude)),
           decimalLongitude = suppressWarnings(as.numeric(decimalLongitude)),
           concentration = suppressWarnings(as.numeric(concentration)),
-          materialSampleID = suppressWarnings(as.character(materialSampleID)),
+          samp_name = suppressWarnings(as.character(samp_name)),
           protocolVersion = suppressWarnings(as.numeric(protocolVersion))) %>%
         dplyr::mutate(
           detected = dplyr::case_when(
@@ -160,7 +160,7 @@ read_data <- function(
             organismQuantity == 0 ~ 0),
             decimalLatitude = suppressWarnings(as.numeric(decimalLatitude)),
             decimalLongitude = suppressWarnings(as.numeric(decimalLongitude)),
-            materialSampleID = suppressWarnings(as.character(materialSampleID)),
+            samp_name = suppressWarnings(as.character(samp_name)),
             protocolVersion = suppressWarnings(as.numeric(protocolVersion)
         )) %>%
         dplyr::rename("primer" = "target_subfragment")
@@ -169,7 +169,7 @@ read_data <- function(
 
   GOTeDNA_df <- do.call(dplyr::bind_rows, lapply(samples, function(x) {
     x[, names(x) %in% c(
-      "protocol_ID", "protocolVersion", "materialSampleID","eventID", "primer",
+      "protocol_ID", "protocolVersion", "samp_name","eventID", "primer",
       "scientificName", "domain","kingdom", "phylum", "class", "order",
       "family", "genus", "date", #"ecodistrict",
       "LClabel", "decimalLatitude", "decimalLongitude",

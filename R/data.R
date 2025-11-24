@@ -8,7 +8,7 @@
 #' \describe{
 #' \item{protocol_ID}{Common project ID to be used when lab and qPCR methods are identical, even for different species and locations}
 #' \item{protocolVersion}{To be entered when project lab or field methods differ slightly}
-#' \item{materialSampleID}{Sample Identifier from original field sample}
+#' \item{samp_name}{Sample Identifier from original field sample}
 #' \item{eventID}{An identifier for the set of information associated with Sampling Event}
 #' \item{primer}{Primer set used for amplification}
 #' \item{species}{Target species name}

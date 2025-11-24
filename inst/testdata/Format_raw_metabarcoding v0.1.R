@@ -127,7 +127,7 @@ spp.df = df %>%
          "order"="Order",
          "family"="Family",
          "genus"="Genus",
-         "materialSampleID" = "Numero_unique_echantillon",
+         "samp_name" = "Numero_unique_echantillon",
          "target_subfragment"="Locus_marker",
          "organismQuantity"="count_by_taxon")
 
@@ -140,7 +140,7 @@ gen.df = df %>%
          "class"="Class",
          "order"="Order",
          "family"="Family",
-         "materialSampleID" = "Numero_unique_echantillon",
+         "samp_name" = "Numero_unique_echantillon",
          "target_subfragment"="Locus_marker",
          "organismQuantity"="count_by_taxon")
 gen.df$scientificName = gen.df$genus
@@ -154,7 +154,7 @@ fam.df = df %>%
          "class"="Class",
          "order"="Order",
          "genus"="Genus",
-         "materialSampleID" = "Numero_unique_echantillon",
+         "samp_name" = "Numero_unique_echantillon",
          "target_subfragment"="Locus_marker",
          "organismQuantity"="count_by_taxon")
 fam.df$scientificName = fam.df$family
@@ -168,7 +168,7 @@ ord.df = df %>%
          "class"="Class",
          "family"="Family",
          "genus"="Genus",
-         "materialSampleID" = "Numero_unique_echantillon",
+         "samp_name" = "Numero_unique_echantillon",
          "target_subfragment"="Locus_marker",
          "organismQuantity"="count_by_taxon")
 ord.df$scientificName = ord.df$order
@@ -182,7 +182,7 @@ cl.df = df %>%
          "order"="Order",
          "family"="Family",
          "genus"="Genus",
-         "materialSampleID" = "Numero_unique_echantillon",
+         "samp_name" = "Numero_unique_echantillon",
          "target_subfragment"="Locus_marker",
          "organismQuantity"="count_by_taxon")
 cl.df$scientificName=cl.df$class
@@ -196,7 +196,7 @@ ph.df = df %>%
          "order"="Order",
          "family"="Family",
          "genus"="Genus",
-         "materialSampleID" = "Numero_unique_echantillon",
+         "samp_name" = "Numero_unique_echantillon",
          "target_subfragment"="Locus_marker",
          "organismQuantity"="count_by_taxon")
 ph.df$scientificName=ph.df$phylum
@@ -244,13 +244,13 @@ for (k in 1:length(df)){
            "order"="Order",
            "family"="Family",
            "genus"="Genus",
-           "materialSampleID" ="ind")
+           "samp_name" ="ind")
 
   stacked[[k]]$taxonID = taxa.id$taxonID[match(stacked[[k]]$scientificName, taxa.id$scientificName)]
   stacked[[k]]$GOTeDNA_ID = metadata$GOTeDNA_ID[1]
 
   stacked[[k]] = stacked[[k]] %>%
-    dplyr::mutate(eventID = paste0(GOTeDNA_ID,"-",materialSampleID),
+    dplyr::mutate(eventID = paste0(GOTeDNA_ID,"-",samp_name),
                   occurrenceID = paste0(eventID,"-",
                                  target_subfragment,"-",
                                  substr(scientificName, 1,1),
@@ -260,7 +260,7 @@ for (k in 1:length(df)){
 
    stacked[[k]]$sampleSizeValue = sampleSizeValue[[k]]$Total[match(stacked[[k]]$scientificName, sampleSizeValue[[k]]$scientificName)]
    stacked[[k]]$sampleSizeUnit = "DNA sequence reads"
-   stacked[[k]] <- stacked[[k]][c("GOTeDNA_ID","materialSampleID","eventID","target_subfragment","scientificName","taxonID",
+   stacked[[k]] <- stacked[[k]][c("GOTeDNA_ID","samp_name","eventID","target_subfragment","scientificName","taxonID",
                                   "kingdom","phylum","class","order","family","genus","occurrenceID","organismQuantity",
                                   "organismQuantityType","sampleSizeValue","sampleSizeUnit")]
 

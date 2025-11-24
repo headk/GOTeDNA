@@ -440,7 +440,7 @@ mod_select_figure_server <- function(id, r) {
           bibliographicCitation
         ) |>
         summarise(
-          `Sample #` = dplyr::n_distinct(materialSampleID),
+          `Sample #` = dplyr::n_distinct(samp_name),
           `Station #` = dplyr::n_distinct(station),
           Contact = unique(ownerContact)
         ) |>

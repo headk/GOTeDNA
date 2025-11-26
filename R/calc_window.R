@@ -64,7 +64,6 @@ calc_window <- function(threshold, scaledprobs) {
       scaleP = mean(scaleP, na.rm = TRUE)
     )
 
-
   df_thresh <- df %>%
     dplyr::filter(
       fill >= thresh.value
@@ -186,7 +185,4 @@ calc_window <- function(threshold, scaledprobs) {
     return(NULL)
 
   }
-
-
-
 }

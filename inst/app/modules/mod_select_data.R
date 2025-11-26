@@ -220,11 +220,11 @@ mod_select_data_server <- function(id, r) {
 
     ## load data
     observe({
-      # 2B changed when reading of external data is implemented
       if (input$datasource == "gotedna") {
         gotedna_data <- gotedna_data0
         gotedna_station <- gotedna_station0
       } else {
+        # TODO: load external data once implemented
         gotedna_data <- gotedna_data0
         gotedna_station <- gotedna_station0
       }
@@ -325,7 +325,9 @@ mod_select_data_server <- function(id, r) {
       )
     })
 
-    observe(r$primer <- input$primer)
+    observeEvent(input$primer, {
+      r$primer <- input$primer
+    })
 
     # sample number
     output$n_smpl_map <- renderUI({

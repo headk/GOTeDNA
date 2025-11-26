@@ -32,11 +32,14 @@ hm_fig <- function(scaledprobs, selected_taxon_level = "species") {
     )
 
   taxa_list <- unique(df[[selected_taxon_level]])
-
-  plots <- lapply(taxa_list, function(sp) {
+  n_taxa <- length(taxa_list)
+  plots <- lapply(seq_along(taxa_list), function(i) {
+    sp <- taxa_list[i]
     df_sp <- df %>% filter(taxon == sp)
-    # create overlay for zeros
     df_sp$zero_layer <- ifelse(df_sp$`Detection rate` == 0, 0, NA)
+
+    # Only show x-axis labels on the bottom subplot if <= 3 subplots
+    show_xticks <- if (n_taxa > 3) TRUE else (i == n_taxa)
 
     plot_ly(
       df_sp,
@@ -58,7 +61,12 @@ hm_fig <- function(scaledprobs, selected_taxon_level = "species") {
         na.color = "transparent"
       ) %>%
       layout(
-        xaxis = list(title = "", tickangle = -45, showgrid = FALSE),
+        xaxis = list(
+          title = "",
+          tickangle = -45,
+          showgrid = FALSE,
+          showticklabels = show_xticks
+        ),
         yaxis = list(title = "", autorange = "reversed", showgrid = FALSE),
         margin = list(l = 50, r = 20, t = 50, b = 50),
         annotations = list(
@@ -77,9 +85,15 @@ hm_fig <- function(scaledprobs, selected_taxon_level = "species") {
       )
   })
 
-  # Combine vertically
+
   n_taxa <- length(taxa_list)
-  total_height <- 275 * n_taxa
+
+  # Set base height per subplot
+  height_per_subplot <- 275
+  extra_spacing <- 30  # extra height per subplot for spacing
+
+  # Total height scales with number of taxa
+  total_height <- height_per_subplot * n_taxa + extra_spacing * max(0, n_taxa - 1)
 
   subplot(
     plots,
@@ -87,7 +101,7 @@ hm_fig <- function(scaledprobs, selected_taxon_level = "species") {
     shareX = FALSE,  # <- important
     shareY = FALSE,
     titleY = FALSE,
-    margin = 0.02
+    margin = .03
   ) %>%
     layout(height = total_height)
   }

@@ -38,18 +38,24 @@
 #' scale_newprob(data = gotedna_data$metabarcoding, newprob)
 #' }
 scale_newprob <- function(data, newprob, selected_taxon_level = "species") {
+  CPscaled <- lapply(newprob, function(species_list) {
 
-  CPscaled <- lapply(newprob, function(x)
-    lapply(x, function(y) {
-      data.frame(y) |>
-      dplyr::mutate(y, scaleP = dplyr::case_when(
-        p == 1 ~ 1,
-        p == 0 ~ 0,
-        p != 0 | 1 ~ scale_prop(p)
-      ))
+  # 1. Extract the maximum p across all elements for this species
+  all_p <- unlist(lapply(species_list, function(df) df$p))
+  max_p <- max(all_p, na.rm = TRUE)
+
+  # 2. Apply minimal change: scale by max_p instead of scale_prop
+  lapply(species_list, function(y) {
+    data.frame(y) |>
+      dplyr::mutate(
+        scaleP = dplyr::case_when(
+          p == 1 ~ 1,
+          p == 0 ~ 0,
+          TRUE   ~ p / max_p
+        )
+      )
+    })
   })
-  )
-
   DFmo <- lapply(CPscaled$newP_agg, function(x) {
     out <- data.frame(
       month = 1:12,
@@ -181,7 +187,7 @@ scale_newprob <- function(data, newprob, selected_taxon_level = "species") {
     DF1 <- DFyr[DFyr$id == taxon, ]
 
     # then add code for interpolation that starts with DF2 = .....
-    # add dataframe above and below to help will fills for jan and dec. Needed to have 4 copyies because of max fucntion used below
+    # add dataframe above and below to help will fills for jan and dec. Needed to have 4 copies because of max function used below
     DF2 <- rbind(
       cbind(DF1, data.frame(G = 1)),
       cbind(DF1, data.frame(G = 2)),

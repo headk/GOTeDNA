@@ -217,7 +217,15 @@ mod_select_figure_server <- function(id, r) {
       list(input$calc_window, input$threshold, input$prot_id),
       {
         req(input$calc_window)
+        r$frozen_selected_taxon_level <- isolate(r$taxon_lvl_slc)
+        r$frozen_selected_taxon_id <- isolate(r$taxon_id_slc)
 
+        update_data_active()
+        update_protocol_menu()
+        req(input$prot_id)
+        validate(
+          need(input$prot_id != "Not available", "Protocol not selected yet")
+        )
         r$data_ready <- prepare_data(r) |>
           filter(protocol_ID == input$prot_id)
 
@@ -236,14 +244,14 @@ mod_select_figure_server <- function(id, r) {
             duration = NULL,
             id = "notif_calc_win"
           )
-          if (r$taxon_lvl_slc == "genus") {
-            newprob <- calc_det_prob(r$data_ready, r$taxon_lvl_slc)
-            r$scaledprobs <- scale_newprob(r$data_ready, newprob, r$taxon_lvl_slc)
-            newprob_by_species <- calc_det_prob(r$data_ready, "species")
+          if (r$frozen_selected_taxon_level == "genus") {
+            newprob <- calc_det_prob(r$data_ready, r$frozen_selected_taxon_level, pool_primers = TRUE)
+            r$scaledprobs <- scale_newprob(r$data_ready, newprob, r$frozen_selected_taxon_level)
+            newprob_by_species <- calc_det_prob(r$data_ready, "species", pool_primers = TRUE)
             r$scaledprobs_by_species <- scale_newprob(r$data_ready, newprob_by_species, "species")
           } else {
-            newprob <- calc_det_prob(r$data_ready, r$taxon_lvl_slc)
-            r$scaledprobs <- scale_newprob(r$data_ready, newprob, r$taxon_lvl_slc)
+            newprob <- calc_det_prob(r$data_ready, r$frozen_selected_taxon_level, pool_primers = TRUE)
+            r$scaledprobs <- scale_newprob(r$data_ready, newprob, r$frozen_selected_taxon_level)
           }
           cli::cli_alert_info("Computing optimal detection window")
 
@@ -308,17 +316,17 @@ mod_select_figure_server <- function(id, r) {
       }
     )
 
-    # UPDATE DATA
-    observe({
+
+    update_data_active <- function() {
       out <- r$cur_data_sta_slc
-      if (!is.null(r$taxon_lvl_slc)) {
-        if (r$taxon_lvl_slc == "species") {
+      if (!is.null(r$frozen_selected_taxon_level)) {
+        if (r$frozen_selected_taxon_level == "species") {
           out <- out |>
             dplyr::filter(species == r$species)
         } else {
-          if (r$taxon_id_slc != "All") {
+          if (r$frozen_selected_taxon_id != "All") {
             out <- out[
-              out[[r$taxon_lvl_slc]] == r$taxon_id_slc,
+              out[[r$frozen_selected_taxon_level]] == r$frozen_selected_taxon_id,
             ]
           }
         }
@@ -329,27 +337,52 @@ mod_select_figure_server <- function(id, r) {
         dplyr::filter(primer %in% r$primer)
       # prevent computation when new data are selected
       r$fig_ready <- FALSE
-    })
+    }
 
-    observe({
-      if (nrow(r$data_active)) {
+    #observe({ update_data_active() })
+
+    update_protocol_menu <- function() {
+      if (!is.null(r$data_active) && nrow(r$data_active) > 0) {
         v_prot <- r$data_active$protocol_ID |> table()
-        l_prot <- names(v_prot) |> as.list()
+        # Sort protocols by decreasing count
+        sorted_prot <- sort(v_prot, decreasing = TRUE)
+
+        # Create choices: display name -> value
+        l_prot <- as.list(names(sorted_prot))
         names(l_prot) <- paste0(
           "Protocol ",
-          v_prot |> names(),
-          " (", v_prot, " observations)"
+          names(sorted_prot),
+          " (", sorted_prot, " observations)"
         )
+
+        # Default selection: largest observation count
+        current_selection <- isolate(input$prot_id)
+        if (is.null(current_selection) || !(current_selection %in% l_prot)) {
+          selected_prot <- names(sorted_prot)[1]  # value with most observations
+        } else {
+          selected_prot <- current_selection
+        }
 
         updateSelectInput(
           session,
           "prot_id",
-          choices = l_prot[v_prot |>
-            order() |>
-            rev()]
+          choices = l_prot,
+          selected = selected_prot
+        )
+      } else {
+        # No data → empty the menu
+        updateSelectInput(
+          session,
+          "prot_id",
+          choices = list(),
+          selected = NULL
         )
       }
-    })
+    }
+
+
+
+    observe({ update_protocol_menu() })
 
 
     # FIGURES
@@ -371,10 +404,10 @@ mod_select_figure_server <- function(id, r) {
     ## EFFORT NEEDED
     output$fig_effort_plot_output <- plotly::renderPlotly({
       req(r$fig_ready, cancelOutput = TRUE)
-      if (r$taxon_lvl_slc == 'genus') {
+      if (r$frozen_selected_taxon_level == 'genus') {
         effort_needed_fig(r$scaledprobs_by_species, selected_taxon_level = "species")
       } else {
-        effort_needed_fig(r$scaledprobs, selected_taxon_level = r$taxon_lvl_slc)
+        effort_needed_fig(r$scaledprobs, selected_taxon_level = r$frozen_selected_taxon_level)
       }
     })
 
@@ -383,10 +416,10 @@ mod_select_figure_server <- function(id, r) {
     output$fig_heatmap_plot_output <- plotly::renderPlotly({
       if (req(r$fig_ready, cancelOutput = TRUE)) {
         plt_ready <- r$fig_ready && r$fig_slc$fig_heatmap
-        if (r$taxon_lvl_slc == 'genus') {
+        if (r$frozen_selected_taxon_level == 'genus') {
           hm_fig(r$scaledprobs_by_species, selected_taxon_level = "species")
         } else {
-          hm_fig(r$scaledprobs, selected_taxon_level = r$taxon_lvl_slc)
+          hm_fig(r$scaledprobs, selected_taxon_level = r$frozen_selected_taxon_level)
         }
       }
     })
@@ -394,43 +427,60 @@ mod_select_figure_server <- function(id, r) {
     ## DATA VARIATION
     output$fig_samples_plot_output <- plotly::renderPlotly({
       plt_ready <- r$fig_ready && r$fig_slc$fig_samples
-      ggp <- draw_fig_samples(r, plt_ready, id = input$prot_id)
-      if (plt_ready) {
-        # multiply height per years #
-        nys <- r$data_ready$year |>
-          unique() |>
-          length()
-        plotly::ggplotly(
-          ggp,
-          height = 320 * nys
-        ) |>
-          default_layout() |>
-          facet_strip_format() |>
+      num_of_species <- r$data_ready$species |> unique() |> length()
+      if (num_of_species > 26) {
+        plotly::plot_ly(
+          type = "scatter",
+          mode = "text",
+          text = "Too many species to plot for this taxon. Please restrict your search to less than 26 species.",
+          x = 0, y = 0,
+          textfont = list(size = 20)
+        ) %>%
           plotly::layout(
-            xaxis = list(title = list(
-              text = "Month",
-              font = list(
-                size = 30,
-                color = "#5A5A5A"
-              ),
-              x = 0
-            )),
-            yaxis = list(title = list(
-              text = "Detection rate",
-              font = list(
-                size = 30,
-                color = "#5A5A5A"
-              ),
-              y = 0
-            ))
-          ) # change the style but
-        # better than it was!!!!!!
+            xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+            yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE)
+          )
+      } else {
+        ggp <- draw_fig_samples(r, plt_ready, id = input$prot_id)
+        if (plt_ready) {
+          # multiply height per years #
+          num_of_years <- r$data_ready$year |>
+            unique() |>
+            length()
+
+          plotly::ggplotly(
+            ggp,
+            height = 320 * num_of_years
+          ) |>
+            default_layout() |>
+            facet_strip_format() |>
+            plotly::layout(
+              xaxis = list(title = list(
+                text = "Month",
+                font = list(
+                  size = 30,
+                  color = "#5A5A5A"
+                ),
+                x = 0
+              )),
+              yaxis = list(title = list(
+                text = "Detection rate",
+                font = list(
+                  size = 30,
+                  color = "#5A5A5A"
+                ),
+                y = 0
+              ))
+            ) # change the style but
+          # better than it was!!!!!!
+        }
       }
     })
 
 
     # DATA AUTHORSHIP TABLE
     output$data_authorship <- DT::renderDT({
+      req(!is.null(r$data_active), nrow(r$data_active) > 0)
       r$data_active |>
         dplyr::ungroup() |>
         dplyr::group_by(
@@ -560,14 +610,14 @@ prepare_data <- function(r) {
     out <- out |>
       dplyr::filter(station %in% r$station_slc)
   }
-  if (!is.null(r$taxon_lvl_slc)) {
-    if (r$taxon_lvl_slc == "species") {
+  if (!is.null(r$frozen_selected_taxon_level)) {
+    if (r$frozen_selected_taxon_level == "species") {
       out <- out |>
         dplyr::filter(species == r$species)
     } else {
-      if (r$taxon_id_slc != "All") {
+      if (r$frozen_selected_taxon_id != "All") {
         out <- out[
-          out[[r$taxon_lvl_slc]] == r$taxon_id_slc,
+          out[[r$frozen_selected_taxon_level]] == r$frozen_selected_taxon_id,
         ]
       }
     }
@@ -576,17 +626,6 @@ prepare_data <- function(r) {
   out |>
     dplyr::filter(primer %in% r$primer)
 }
-
-n_prots <- function(r) {
-  prot_ids <- r$data_ready |>
-    dplyr::summarise(
-      n = sum(detect, nondetect, na.rm = TRUE),
-      .by = protocol_ID
-    ) |>
-    sort(n, decreasing = TRUE) |>
-    select(protocol_ID)
-}
-
 
 ## FIG HELPERS
 
@@ -597,24 +636,8 @@ plotText <- function(txt, size = 6) {
     ggplot2::theme_void()
 }
 
-plotNotAvailableTaxoLevel <- function() {
-  plotText("Plot not available at the species level.")
-}
-
-plotNotAvailableSpeciesLevel <- function() {
-  plotText("Plot only available at the species level.")
-}
-
 plotNotAvailable <- function() {
   plotText(stringr::str_wrap("Plot not available. Click 'Compute & visualize'"))
-}
-
-plotNotAvailableForqPCR <- function() {
-  plotText("Plot not available for qPCR data.")
-}
-
-plotNotAvailableYear <- function() {
-  plotText("Plot not available; small sample size.")
 }
 
 plotNotAvailableError <- function() {
@@ -624,25 +647,12 @@ plotNotAvailableError <- function() {
   ))
 }
 
-add_fixed_legend <- function(file) {
-  if (is.null(file)) {
-    tagList()
-  } else {
-    img(
-      src = file.path("img", "fixed-legends", file),
-      alt = "Legend of the figure"
-    )
-  }
-}
-
-
 ## Detection part 1
 draw_fig_smooth <- function(r, ready, id) {
   if (ready) {
     plt <- try(
       smooth_fig(
-        r$data_ready |>
-          filter(protocol_ID == id)
+        r$scaledprobs
       )
     )
     if (inherits(plt, "try-error")) {
@@ -670,25 +680,6 @@ draw_fig_detect <- function(r, ready, threshold) {
   }
 }
 
-## THIS IS NOT BEING CALLED AND CAN BE DELETED OR REFACTORED SO THAT IT IS USED
-## Heatmap
-draw_fig_heatmap <- function(r, ready) {
-  if (ready) {
-    p <- try(hm_fig(
-      r$scaledprobs
-    ))
-
-    if (inherits(p, "try-error")) {
-      plotNotAvailableError()
-      # there are lots of erros due xmin not found, this is better than a misleading
-      # message on the plot
-    } else {
-      p
-    }
-  } else {
-    plotNotAvailable()
-  }
-}
 
 ## Data variation
 draw_fig_samples <- function(r, ready, id) {
@@ -702,7 +693,6 @@ draw_fig_samples <- function(r, ready, id) {
     plotNotAvailable()
   }
 }
-
 
 ui_fig_detect <- function(fig_id, title, caption_file, ns) {
   div(
@@ -836,7 +826,6 @@ ui_fig_samples <- function(fig_id, title, caption_file, ns) {
     )
   )
 }
-
 
 ## Plotly Helpers
 facet_strip_format <- function(gp) {

@@ -26,17 +26,27 @@
 #' \dontrun{
 #'  calc_det_prob(data = D_mb)
 #' }
-calc_det_prob <- function(data, selected_taxon_level = "species") {
+calc_det_prob <- function(data, selected_taxon_level = "species", pool_primers = FALSE) {
   oop <- options("dplyr.summarise.inform")
   options(dplyr.summarise.inform = FALSE)
   # reset option on exit
   on.exit(options(dplyr.summarise.inform = oop))
 
+  if (pool_primers) {
+  data %<>%
+    dplyr::mutate(.,
+                  id = paste0(protocol_ID, ";", .data[[selected_taxon_level]]),
+                  id.yr = paste0(protocol_ID, ";", .data[[selected_taxon_level]], ";ALLPRIMERS;", year)
+    )
+  } else {
   data %<>%
     dplyr::mutate(.,
       id = paste0(protocol_ID, ";", .data[[selected_taxon_level]], ";", primer),
       id.yr = paste0(protocol_ID, ";", .data[[selected_taxon_level]], ";", primer, ";", year)
     )
+  }
+
+
   # Create a variable so detection probability is calculated separately for each
   # protocol ID, version, selected_taxon_level, and primer
 
